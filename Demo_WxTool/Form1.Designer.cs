@@ -112,7 +112,10 @@
             this.Controls.Add(this.txtXor);
             this.Controls.Add(this.btnStop);
             this.Controls.Add(this.btnDatToImage);
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
             this.Name = "Form1";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "微信Dat文件解码";
             this.DragDrop += new System.Windows.Forms.DragEventHandler(this.Form1_DragDrop);
             this.DragEnter += new System.Windows.Forms.DragEventHandler(this.Form1_DragEnter);
