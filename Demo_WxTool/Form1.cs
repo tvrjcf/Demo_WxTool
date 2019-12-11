@@ -30,14 +30,27 @@ namespace Demo_WxTool
             }
             try
             {
-                var dir = new DirectoryInfo(txtFolder.Text);
-                if (dir == null) return;
+                FileInfo[] files = null;
+                if (File.Exists(txtFolder.Text))
+                {
+                    files = new FileInfo[] { new FileInfo(txtFolder.Text) };
+                }
+                else
+                {
+                    var dir = new DirectoryInfo(txtFolder.Text);
+                    if (dir != null)
+                    {
+                        files = dir.GetFiles();
+                    }
+                }
+                var list = files.Where(p => p.Extension.ToLower().Contains("dat")).ToList();
+                if (list.Count == 0)
+                    return;
 
                 successCount = 0;
                 var xorKey = Convert.ToInt64(txtXor.Text, 16);
-                var files = dir.GetFiles();
                 progressBar1.Value = 0;
-                progressBar1.Maximum = files.Length;
+                progressBar1.Maximum = list.Count;
                 btnStop.Enabled = true;
                 btnDatToImage.Enabled = false;
                 IsRunning = true;
@@ -45,20 +58,16 @@ namespace Demo_WxTool
                 ThreadPool.SetMinThreads(1, 1);
                 ThreadPool.SetMaxThreads(5, 5);
 
-                //AutoResetEvent myEvent = new AutoResetEvent(false);
-                foreach (var file in files)
+                foreach (var file in list)
                 {
                     if (IsStop) break;
                     ThreadPool.QueueUserWorkItem(p => DatToImage(file, xorKey));
                 }
-                //myEvent.WaitOne();
-                //MessageBox.Show("线程池终止！");
-                //new Thread(new ThreadStart(delegate { DatToImage(files, txtXor.Text); })).Start();
-                //MessageBox.Show(string.Format("[{0}]已完成转换", successCount));
+
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                MessageBox.Show(ex.Message);
                 Reset();
             }
             finally
@@ -70,24 +79,22 @@ namespace Demo_WxTool
             if (!IsStop)
             {
                 byte[] data = null;
-                if (fileInfo.Extension.ToLower().Contains("dat"))
+                using (var fs = new FileStream(fileInfo.FullName, FileMode.Open))
                 {
-                    using (var fs = new FileStream(fileInfo.FullName, FileMode.Open))
+                    data = new byte[fs.Length];
+                    int count = fs.Read(data, 0, data.Length);
+                    var fileName = fileInfo.FullName + ".jpg";
+                    using (var nfs = new FileStream(fileName, FileMode.OpenOrCreate))
                     {
-                        data = new byte[fs.Length];
-                        int count = fs.Read(data, 0, data.Length);
-                        var fileName = fileInfo.FullName + ".jpg";
-                        using (var nfs = new FileStream(fileName, FileMode.OpenOrCreate))
+                        foreach (var b in data)
                         {
-                            foreach (var b in data)
-                            {
-                                nfs.WriteByte((byte)(b ^ key));
-                                nfs.Flush();
-                            }
+                            nfs.WriteByte((byte)(b ^ key));
+                            nfs.Flush();
                         }
-                        Console.WriteLine("正在处理：" + fileInfo.FullName);
                     }
+                    Console.WriteLine("正在处理：" + fileInfo.FullName);
                 }
+
             }
             Interlocked.Increment(ref successCount);
             progressBar1.BeginInvoke((MethodInvoker)delegate { progressBar1.Value++; });
